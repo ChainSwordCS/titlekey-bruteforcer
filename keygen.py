@@ -58,7 +58,17 @@ def verify_ckey(ckey):
     #    return True
     return True
     
-
+def encrypt_guess(title_id, pwd, ckey):
+    title_id_a = title_id[2:]
+    secret = binascii.unhexlify(get_secret() + title_id_a)
+    hashed_secret = md5(secret).digest()
+    non_encrypted_key = pbkdf2_hmac('sha1', pwd.encode(), hashed_secret, 20, 16)
+    title_id += '0000000000000000'
+    title_id = binascii.unhexlify(title_id)
+    ckey = binascii.unhexlify(ckey)
+    encryptor = AES.new(key=ckey, mode=AES.MODE_CBC, IV=title_id)
+    encrypted_title_key = encryptor.encrypt(non_encrypted_key)
+    return (non_encrypted_key, binascii.hexlify(encrypted_title_key).decode())
 
 def main(tid, ckey, password='mypass'):
     print('Using title id: {}'.format(tid))
