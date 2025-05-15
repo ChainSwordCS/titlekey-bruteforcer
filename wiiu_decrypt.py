@@ -25,12 +25,12 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 def show_progress(val, maxval, cid):
     # crappy workaround I bet, but print() didn't do what I wanted
     minval = min(val, maxval)
-    #sys.stdout.write('\rDecrypting {}...  {:>5.1f}% {:>10} / {:>10} ({} MiB)'.format(cid, (minval / maxval) * 100, minval, maxval, maxval / (1024 ** 2)))
+    sys.stdout.write('\rDecrypting {}...  {:>5.1f}% {:>10} / {:>10} ({} MiB)'.format(cid, (minval / maxval) * 100, minval, maxval, maxval / (1024 ** 2)))
     sys.stdout.flush()
 
 def show_chunk(num, count, cid):
     # crappy workaround I bet, but print() didn't do what I wanted
-    #sys.stdout.write('\rDecrypting {}...  Chunk  {:>10} / {:>10} ({} MiB)'.format(cid, num + 1, count, (count * 0x10000) / (1024 ** 2)))
+    sys.stdout.write('\rDecrypting {}...  Chunk  {:>10} / {:>10} ({} MiB)'.format(cid, num + 1, count, (count * 0x10000) / (1024 ** 2)))
     sys.stdout.flush()
 
 def get_contents(arg_tid):
@@ -169,7 +169,7 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
             encrypted = apps[i]
             decrypted = bytes()
             for chunk_num in range(chunk_count):
-                show_chunk(chunk_num, chunk_count, c[0])
+                #show_chunk(chunk_num, chunk_count, c[0])
                 # decrypt and verify hash tree
                 cipher_hash_tree = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(bytes(16)), backend=default_backend()).decryptor()
                 hash_tree = cipher_hash_tree.update(encrypted[0x1000*chunk_num:0x1000*chunk_num+0x400]) + cipher_hash_tree.finalize()
@@ -230,7 +230,7 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
                 left -= readsize
                 left_hash -= readsize
 
-                show_progress(c[3] - left, c[3], c[0])
+                #show_progress(c[3] - left, c[3], c[0])
                 if left_hash < 0:
                     left_hash = 0
                 if left <= 0:

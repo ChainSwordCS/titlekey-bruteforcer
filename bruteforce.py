@@ -17,7 +17,8 @@ def bruteforce(tid, ckey):
         for guess in itertools.product(chars, repeat=length):
             attempts += 1
             guess = ''.join(guess)
-            print(guess)
+            if attempts % 100 == 0:
+                print(guess)
             unencrypted_keyguess, encrypted_keyguess = keygen.encrypt_guess(tid, guess, ckey)
             result = wiiu_decrypt.decrypt(tid, encrypted_keyguess, ckey, contents, title_id, app_data)
             if (result == 1):
