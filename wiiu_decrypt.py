@@ -90,7 +90,7 @@ def get_app_data(arg_tid, contents):
     return (h3_hasheses, sizes, apps)
 
 def finalize_dec(arg_tid, contents, decrypted_parts):
-    for i in range(len(contents)):
+    for i in range(len(decrypted_parts)):
         c = contents[i]
         with open(arg_tid + '/' + c[0] + '.app.dec', 'wb') as decrypted:
             decrypted.write(decrypted_parts[i])
