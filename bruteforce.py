@@ -11,6 +11,8 @@ import wiiu_decrypt
 def bruteforce(tid, ckey):
     chars = string.printable.strip()
     attempts = 0
+    contents, title_id = wiiu_decrypt.get_contents(tid)
+    app_data = wiiu_decrypt.get_app_data(tid, contents)
     for length in range(1, 4):
         for guess in itertools.product(chars, repeat=length):
             attempts += 1
@@ -18,8 +20,6 @@ def bruteforce(tid, ckey):
             print(guess)
             unencrypted_keyguess = keygen.generate_key(tid, guess).decode()
             encrypted_keyguess = keygen.encrypt_title_key(tid, unencrypted_keyguess, ckey).decode()
-            contents, title_id = wiiu_decrypt.get_contents(tid)
-            app_data = wiiu_decrypt.get_app_data(tid, contents)
             result = wiiu_decrypt.decrypt(tid, encrypted_keyguess, ckey, contents, title_id, app_data)
             if (result == 1):
                 print('bruteforce success after '+attempts+' attempts')
