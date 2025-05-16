@@ -7,6 +7,7 @@ import string
 import json
 import argparse
 import binascii
+import sys
 
 import keygen
 import wiiu_decrypt
