@@ -8,9 +8,11 @@ import json
 import argparse
 import binascii
 import sys
+import libTWLPy
 
 import keygen
 import wiiu_decrypt
+import twl_decrypt
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--system', help='valid options: \'wiiu\', \'dsi\'\n'+'not yet implemented: \'wii\', \'3ds\'')
@@ -43,8 +45,28 @@ def bruteforce_wiiu(tid, ckey):
     return
 
 def bruteforce_dsi(tid, ckey):
-    chars = "0123456789"
+    chars = "mypas"
     attempts = 0
+    metadata, content, title = twl_decrypt.get_data(tid)
+    for length in range(6, 10):
+        for guess in itertools.product(chars, repeat=length):
+            attempts += 1
+            guess = ''.join(guess)
+            if attempts % 100 == 0:
+                print(guess)
+            encrypted_keyguess = ''
+            unencrypted_keyguess = keygen.generate_key(tid, guess)
+            #unencrypted_keyguess, encrypted_keyguess = keygen.encrypt_guess(tid, guess, ckey)
+            result = twl_decrypt.decrypt(tid, unencrypted_keyguess, ckey, metadata, content) #, title)
+            if (result == 1):
+                print('bruteforce success after '+str(attempts)+' attempts')
+                print('password: '+guess)
+                print('encrypted titlekey: '+encrypted_keyguess)
+                print('decrypted titlekey: '+binascii.hexlify(unencrypted_keyguess).decode())
+                return
+    
+    print('bruteforce failed...')
+    return
 
 
 
