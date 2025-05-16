@@ -19,7 +19,7 @@ def get_data(tid):
     #title_version = title.tmd.title_version
     title.load_content_records()
     
-    contentstr = str(title.tmd.content_record.content_id).rjust(8, '0')
+    contentstr = '{:08X}'.format(title.tmd.content_record.content_id)
     #contentstr = contentstr+'.app'
     content = open(tid+'/'+contentstr, 'rb').read()
     
