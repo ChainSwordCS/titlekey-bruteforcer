@@ -12,9 +12,7 @@
 # with IV being all 0x00, or index bytes + 0x00 padding
 
 import binascii
-import glob
 import hashlib
-import itertools
 import math
 import os
 import struct
@@ -48,7 +46,6 @@ def get_contents(arg_tid):
         content_count = struct.unpack('>H', tmd.read(2))[0]
 
         tmd.seek(0x204)
-        tmd_index = tmd.read(2)[::-1]
 
         for c in range(content_count):
             tmd.seek(0xB04 + (0x30 * c))

@@ -6,10 +6,10 @@
 
 from hashlib import pbkdf2_hmac, md5
 import binascii
-from Crypto.Cipher import AES
 import sys
 import json
-
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 
 def get_secret():
@@ -43,8 +43,8 @@ def encrypt_title_key(title_id, title_key, ckey):
     title_id = binascii.unhexlify(title_id)
     ckey = binascii.unhexlify(ckey)
     title_key = binascii.unhexlify(title_key)
-    encryptor = AES.new(key=ckey, mode=AES.MODE_CBC, IV=title_id)
-    encrypted_title_key = encryptor.encrypt(title_key)
+    encryptor = Cipher(algorithms.AES(ckey), modes.CBC(title_id), backend=default_backend()).encryptor()
+    encrypted_title_key = encryptor.update(title_key) + encryptor.finalize()
 
     # return as hexstring
     return binascii.hexlify(encrypted_title_key)
@@ -57,7 +57,7 @@ def verify_ckey(ckey):
     #if md5(ckey.upper().encode()).hexdigest() == '35ac5994972279331d97094fa2fb97fc':
     #    return True
     return True
-    
+
 def encrypt_guess(title_id, pwd, ckey):
     title_id_a = title_id[2:]
     secret = binascii.unhexlify(get_secret() + title_id_a)
@@ -66,8 +66,8 @@ def encrypt_guess(title_id, pwd, ckey):
     title_id += '0000000000000000'
     title_id = binascii.unhexlify(title_id)
     ckey = binascii.unhexlify(ckey)
-    encryptor = AES.new(key=ckey, mode=AES.MODE_CBC, IV=title_id)
-    encrypted_title_key = encryptor.encrypt(non_encrypted_key)
+    encryptor = Cipher(algorithms.AES(ckey), modes.CBC(title_id), backend=default_backend()).encryptor()
+    encrypted_title_key = encryptor.update(non_encrypted_key) + encryptor.finalize()
     return (non_encrypted_key, binascii.hexlify(encrypted_title_key).decode())
 
 def main(tid, ckey, password='mypass'):
