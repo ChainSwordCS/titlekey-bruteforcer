@@ -46,8 +46,12 @@ def bruteforce_dsi(tid, ckey):
     attempts = 0
 
 
-tid = args.titleid
-# TODO: sanity checking
+
+if args.titleid:
+    # TODO: sanity checking
+    tid = args.titleid
+else:
+    sys.exit('Error: invalid titleid')
 
 system = ''
 if args.system:
