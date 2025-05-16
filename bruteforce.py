@@ -57,7 +57,7 @@ def bruteforce_dsi(tid, ckey):
             encrypted_keyguess = ''
             unencrypted_keyguess = keygen.generate_key(tid, guess)
             #unencrypted_keyguess, encrypted_keyguess = keygen.encrypt_guess(tid, guess, ckey)
-            result = twl_decrypt.decrypt(tid, unencrypted_keyguess, ckey, metadata, content) #, title)
+            result = twl_decrypt.decrypt(tid, binascii.unhexlify(unencrypted_keyguess), ckey, metadata, content) #, title)
             if (result == 1):
                 print('bruteforce success after '+str(attempts)+' attempts')
                 print('password: '+guess)
