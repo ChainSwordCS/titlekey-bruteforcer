@@ -48,22 +48,41 @@ def bruteforce_dsi(tid, ckey):
     chars = "mypas"
     attempts = 0
     metadata, content, title = twl_decrypt.get_data(tid)
-    for length in range(6, 10):
-        for guess in itertools.product(chars, repeat=length):
-            attempts += 1
-            guess = ''.join(guess)
-            if attempts % 100 == 0:
-                print(guess)
-            encrypted_keyguess = ''
-            unencrypted_keyguess = keygen.generate_key(tid, guess)
-            #unencrypted_keyguess, encrypted_keyguess = keygen.encrypt_guess(tid, guess, ckey)
-            result = twl_decrypt.decrypt(tid, binascii.unhexlify(unencrypted_keyguess), ckey, metadata, content) #, title)
-            if (result == 1):
-                print('bruteforce success after '+str(attempts)+' attempts')
-                print('password: '+guess)
-                print('encrypted titlekey: '+encrypted_keyguess)
-                print('decrypted titlekey: '+binascii.hexlify(unencrypted_keyguess).decode())
-                return
+    
+    # if this title's files included a ticket (and by extension a valid titlekey)
+    if metadata[6] is not None:
+        for length in range(1, 10):
+            for guess in itertools.product(chars, repeat=length):
+                attempts += 1
+                guess = ''.join(guess)
+                if attempts % 100 == 0:
+                    print(guess)
+                #encrypted_keyguess = ''
+                unencrypted_keyguess = keygen.generate_key(tid, guess)
+                #if binascii.unhexlify(unencrypted_keyguess) == binascii.unhexlify(metadata[6]):
+                if unencrypted_keyguess == metadata[6]:
+                    print('bruteforce success after '+str(attempts)+' attempts')
+                    print('password: '+guess)
+                    #print('encrypted titlekey: '+encrypted_keyguess)
+                    print('decrypted titlekey: '+unencrypted_keyguess.decode())
+                    return
+    else:
+        for length in range(1, 10):
+            for guess in itertools.product(chars, repeat=length):
+                attempts += 1
+                guess = ''.join(guess)
+                if attempts % 100 == 0:
+                    print(guess)
+                encrypted_keyguess = ''
+                unencrypted_keyguess = keygen.generate_key(tid, guess)
+                #unencrypted_keyguess, encrypted_keyguess = keygen.encrypt_guess(tid, guess, ckey)
+                result = twl_decrypt.decrypt(tid, unencrypted_keyguess, ckey, metadata, content) #, title)
+                if (result == 1):
+                    print('bruteforce success after '+str(attempts)+' attempts')
+                    print('password: '+guess)
+                    #print('encrypted titlekey: '+encrypted_keyguess)
+                    print('decrypted titlekey: '+binascii.hexlify(unencrypted_keyguess).decode())
+                    return
     
     print('bruteforce failed...')
     return
