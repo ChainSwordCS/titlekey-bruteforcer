@@ -29,7 +29,7 @@ NUM_WORKERS = multiprocessing.cpu_count() // 2 # Probably about optimal?
 BATCH_SIZE = 500
 #NUM_WORKERS = 1
 
-COMMON_PASSES = ["mypass", "56789", "1234567890", "nintendo", "test"]
+COMMON_PASSES = ["mypass", "5678", "56789", "1234567890", "nintendo", "test"]
 
 
 def bruteforce_wiiu(tid, ckey):
@@ -47,14 +47,15 @@ def bruteforce_wiiu(tid, ckey):
         workers.append(p)
     
     try:
-        get_guesses(chars, 1, 5, 0, True)
+        get_guesses(chars, 1, 5, 0, False)
     except KeyboardInterrupt:
         decoded_event.set() # Not actually decoded but it shuts down all the stuff
     
     for p in workers:
         p.join()
     
-    print('bruteforce failed...')
+    if not decoded_event.is_set():
+        print('bruteforce failed...')
     return
 
 def bruteforce_dsi(tid, ckey):
@@ -65,12 +66,8 @@ def get_guesses(chars = string.printable.strip(), minsize = 1, maxsize = 5, offs
     global data_queue, decoded_event, passes_done_event
     attempts = 0
     if use_common:
-        for s in COMMON_PASSES:
-            try:
-                data_queue.put((s, attempts), timeout=1)
-                attempts += 1
-            except data_queue.Full:
-                break
+        data_queue.put((COMMON_PASSES, attempts), timeout=1)
+        attempts += 1
     for length in range(minsize, maxsize+1):
         pass_iter = itertools.product(chars, repeat=length)
         iter_done = False
