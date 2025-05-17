@@ -61,46 +61,28 @@ def bruteforce_wiiu(tid, ckey):
     return
 
 def bruteforce_dsi(tid, ckey):
-    chars = "mypas"
-    attempts = 0
+    global data_queue, decoded_event
+    #chars = "mypas"
+    chars = string.digits + string.ascii_lowercase # Only observed characters so far
     metadata, content, title = twl_decrypt.get_data(tid)
     
-    # if this title's files included a ticket (and by extension a valid titlekey)
-    if metadata[6] is not None:
-        for length in range(1, 10):
-            for guess in itertools.product(chars, repeat=length):
-                attempts += 1
-                guess = ''.join(guess)
-                if attempts % 100 == 0:
-                    print(guess)
-                #encrypted_keyguess = ''
-                unencrypted_keyguess = keygen.generate_key(tid, guess)
-                #if binascii.unhexlify(unencrypted_keyguess) == binascii.unhexlify(metadata[6]):
-                if unencrypted_keyguess == metadata[6]:
-                    print('bruteforce success after '+str(attempts)+' attempts')
-                    print('password: '+guess)
-                    #print('encrypted titlekey: '+encrypted_keyguess)
-                    print('decrypted titlekey: '+unencrypted_keyguess.decode())
-                    return
-    else:
-        for length in range(1, 10):
-            for guess in itertools.product(chars, repeat=length):
-                attempts += 1
-                guess = ''.join(guess)
-                if attempts % 100 == 0:
-                    print(guess)
-                encrypted_keyguess = ''
-                unencrypted_keyguess = keygen.generate_key(tid, guess)
-                #unencrypted_keyguess, encrypted_keyguess = keygen.encrypt_guess(tid, guess, ckey)
-                result = twl_decrypt.decrypt(tid, unencrypted_keyguess, ckey, metadata, content) #, title)
-                if (result == 1):
-                    print('bruteforce success after '+str(attempts)+' attempts')
-                    print('password: '+guess)
-                    #print('encrypted titlekey: '+encrypted_keyguess)
-                    print('decrypted titlekey: '+binascii.hexlify(unencrypted_keyguess).decode())
-                    return
+    # Start worker processes
+    workers = []
+    for i in range(NUM_WORKERS):
+        p = multiprocessing.Process(target=dsi_process_guesses, args=(i, data_queue, decoded_event, passes_done_event, tid, ckey, metadata, content))
+        p.start()
+        workers.append(p)
     
-    print('bruteforce failed...')
+    try:
+        get_guesses(chars, 1, 5, 0, False)
+    except KeyboardInterrupt:
+        decoded_event.set() # Not actually decoded but it shuts down all the stuff
+    
+    for p in workers:
+        p.join()
+    
+    if not decoded_event.is_set():
+        print('bruteforce failed...')
     return
 
 def get_guesses(chars = string.printable.strip(), minsize = 1, maxsize = 5, offset = 0, use_common = True):
@@ -166,6 +148,91 @@ def wiiu_process_guesses(worker_id, data_queue, decoded_event, passes_done_event
                 print(f"[Worker {worker_id}] No more data and producer is done.")
                 break
             continue
+
+
+def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event, tid, ckey, metadata, content):
+    checking = 0
+    waiting = 0
+    decrypting = 0
+    
+    # if this title's files included a ticket (and by extension a valid titlekey)
+    if metadata[6] is not None:
+        while True:
+            a = time.time()
+            if decoded_event.is_set():
+                print(f"[Worker {worker_id}] Total checking time: {checking}")
+                print(f"[Worker {worker_id}] Total waiting time: {waiting}")
+                print(f"[Worker {worker_id}] Total decrypting time: {decrypting}")
+                break
+            try:
+                b = time.time()
+                guesses, attempt = data_queue.get(timeout=1) # Should be longer than the guess generator's sleep
+                c = time.time()
+                for guess in guesses:
+                    encrypted_keyguess = ''
+                    unencrypted_keyguess = keygen.generate_key(tid, guess)
+                    d = time.time()
+                    checking += b-a
+                    waiting += c-b
+                    decrypting += d-c
+                    #if binascii.unhexlify(unencrypted_keyguess) == binascii.unhexlify(metadata[6]):
+                    if unencrypted_keyguess == metadata[6]:
+                        print('bruteforce success after about '+str(attempt)+' attempts')
+                        print('password: '+guess)
+                        try: #not sure if this works
+                            encrypted_keyguess = keygen.encrypt_title_key(tid, unencrypted_keyguess, ckey)
+                            print('encrypted titlekey: '+binascii.hexlify(encrypted_keyguess).decode())
+                        except:
+                            print(':(')
+                            continue
+                        print('decrypted titlekey: '+binascii.hexlify(unencrypted_keyguess).decode())
+                        decoded_event.set()
+                        
+            except:
+                if passes_done_event.is_set() and data_queue.empty():
+                    print(f"[Worker {worker_id}] No more data and producer is done.")
+                    break
+                continue
+    else:
+        # decrypt content and verify hash, business as usual
+        while True:
+            a = time.time()
+            if decoded_event.is_set():
+                print(f"[Worker {worker_id}] Total checking time: {checking}")
+                print(f"[Worker {worker_id}] Total waiting time: {waiting}")
+                print(f"[Worker {worker_id}] Total decrypting time: {decrypting}")
+                break
+            try:
+                b = time.time()
+                guesses, attempt = data_queue.get(timeout=1) # Should be longer than the guess generator's sleep
+                c = time.time()
+                for guess in guesses:
+                    encrypted_keyguess = ''
+                    unencrypted_keyguess = keygen.generate_key(tid, guess)
+                    result = twl_decrypt.decrypt(tid, unencrypted_keyguess, ckey, metadata, content)
+                    d = time.time()
+                    checking += b-a
+                    waiting += c-b
+                    decrypting += d-c
+                    if (result == 1):
+                        print('bruteforce success after about '+str(attempt)+' attempts')
+                        print('password: '+guess)
+                        try: #not sure if this works
+                            encrypted_keyguess = keygen.encrypt_title_key(tid, unencrypted_keyguess, ckey)
+                            print('encrypted titlekey: '+binascii.hexlify(encrypted_keyguess).decode())
+                        except:
+                            print(':(')
+                            continue
+                        print('decrypted titlekey: '+binascii.hexlify(unencrypted_keyguess).decode())
+                        decoded_event.set()
+                        
+            except:
+                if passes_done_event.is_set() and data_queue.empty():
+                    print(f"[Worker {worker_id}] No more data and producer is done.")
+                    break
+                continue
+
+
 
 def main():
     global data_queue, decoded_event, passes_done_event
