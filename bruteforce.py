@@ -25,44 +25,29 @@ args = parser.parse_args()
 # Threading setup
 QUEUE_MAX_SIZE = 1000 # Strict
 QUEUE_MIN_SIZE = 500  # Target
-NUM_WORKERS = multiprocessing.cpu_count() # Probably about optimal, note this coes not directly correspond to core usage
+NUM_WORKERS = multiprocessing.cpu_count() // 2 # Probably about optimal?
+BATCH_SIZE = 500
+#NUM_WORKERS = 1
 
-COMMON_PASSES = ["mypass", "5678", "1234567890", "nintendo", "test"]
+COMMON_PASSES = ["mypass", "56789", "1234567890", "nintendo", "test"]
 
-manager = None
-data_queue = None
-decoded_event = None
-passes_done_event = None
 
 def bruteforce_wiiu(tid, ckey):
-    chars = "0123456789"
+    global data_queue, decoded_event
+    #chars = "0123456789"
+    chars = string.digits + string.ascii_lowercase # Only observed characters so far
     contents, title_id = wiiu_decrypt.get_contents(tid)
     app_data = wiiu_decrypt.get_app_data(tid, contents)
-    # attempts = 0
-    # for length in range(5, 10):
-    #     for guess in itertools.product(chars, repeat=length):
-    #         attempts += 1
-    #         guess = ''.join(guess)
-    #         if attempts % 100 == 0:
-    #             print(guess)
-    #         unencrypted_keyguess, encrypted_keyguess = keygen.encrypt_guess(tid, guess, ckey)
-    #         result = wiiu_decrypt.decrypt(tid, encrypted_keyguess, ckey, contents, title_id, app_data)
-    #         if (result == 1):
-    #             print('bruteforce success after '+str(attempts)+' attempts')
-    #             print('password: '+guess)
-    #             print('encrypted titlekey: '+encrypted_keyguess)
-    #             print('decrypted titlekey: '+binascii.hexlify(unencrypted_keyguess).decode())
-    #             return
     
     # Start worker processes
     workers = []
     for i in range(NUM_WORKERS):
-        p = multiprocessing.Process(target=wiiu_process_guesses, args=(i, contents, title_id, app_data, tid, ckey))
+        p = multiprocessing.Process(target=wiiu_process_guesses, args=(i, data_queue, decoded_event, passes_done_event, contents, title_id, app_data, tid, ckey))
         p.start()
         workers.append(p)
     
     try:
-        get_guesses(data_queue, chars, 1, 5, 0, True)
+        get_guesses(chars, 1, 5, 0, True)
     except KeyboardInterrupt:
         decoded_event.set() # Not actually decoded but it shuts down all the stuff
     
@@ -77,64 +62,67 @@ def bruteforce_dsi(tid, ckey):
     attempts = 0
 
 def get_guesses(chars = string.printable.strip(), minsize = 1, maxsize = 5, offset = 0, use_common = True):
+    global data_queue, decoded_event, passes_done_event
     attempts = 0
-    size = minsize
-    if use_common and offset >= len(COMMON_PASSES):
-        offset -= len(COMMON_PASSES)
-    elif use_common:
-        size = 0
-    for i in range(minsize, maxsize):
-        if len(chars)**i <= offset:
-            offset -= len(chars) ** i
-            size += 1
-        else:
-            break
-    
-    while not decoded_event.is_set() and not passes_done_event.is_set():
-        if data_queue.qsize() < QUEUE_MIN_SIZE:
-            for _ in range(QUEUE_MAX_SIZE - data_queue.qsize()):
-                #item = random.randint(0, 100)
-                if size == 0:
-                    item = COMMON_PASSES[offset]
-                else:
-                    item = ""
-                    v = offset
-                    for i in range(size):
-                        item = chars[v%len(chars)] + item
-                        v //= len(chars)
-                try:
-                    data_queue.put((item, attempts), timeout=1)
-                    print(f"[Producer] Enqueued {item}")
-                    attempts += 1
-                except data_queue.Full:
-                    break
-                offset += 1
+    if use_common:
+        for s in COMMON_PASSES:
+            try:
+                data_queue.put((s, attempts), timeout=1)
                 attempts += 1
-                if (size == 0 and offset == len(COMMON_PASSES)) or offset == len(chars)**size:
-                    offset = 0
-                    size += 1
-                    if size < maxsize:
-                        passes_done_event.set()
+            except data_queue.Full:
+                break
+    for length in range(minsize, maxsize+1):
+        pass_iter = itertools.product(chars, repeat=length)
+        iter_done = False
+        while not iter_done and not decoded_event.is_set() and not passes_done_event.is_set():
+            queue_size = data_queue.qsize()
+            if queue_size < QUEUE_MIN_SIZE:
+                for i in range((QUEUE_MAX_SIZE - queue_size)):
+                    passes = []
+                    try:
+                        for _ in range(BATCH_SIZE):
+                            passes.append(''.join(next(pass_iter)))
+                    except StopIteration:
+                        iter_done = True
+                    if len(passes) > 0:
+                        data_queue.put((passes, attempts), timeout=1)
+                        if i == QUEUE_MAX_SIZE - queue_size:
+                            print(passes[-1])
+                        attempts += len(passes)
+                    if iter_done:
                         break
-        time.sleep(0.25) # Give them some time
+                    
+            time.sleep(.1)
+    passes_done_event.set()
 
-def wiiu_process_guesses(worker_id, contents, title_id, app_data, tid, ckey):
-    """Worker processes items until the queue is empty and producer is done."""
+def wiiu_process_guesses(worker_id, data_queue, decoded_event, passes_done_event, contents, title_id, app_data, tid, ckey):
+    checking = 0
+    waiting = 0
+    decrypting = 0
     while True:
+        a = time.time()
         if decoded_event.is_set():
+            print(f"[Worker {worker_id}] Total checking time: {checking}")
+            print(f"[Worker {worker_id}] Total waiting time: {waiting}")
+            print(f"[Worker {worker_id}] Total decrypting time: {decrypting}")
             break
         try:
-            guess, attempt = data_queue.get(timeout=1) # Should be longer than the guess generator's sleep
-            print(f"[Worker {worker_id}] Processing {guess}")
-            unencrypted_keyguess, encrypted_keyguess = keygen.encrypt_guess(tid, guess, ckey)
-            result = wiiu_decrypt.decrypt(tid, encrypted_keyguess, ckey, contents, title_id, app_data)
-            if (result == 1):
-                print('bruteforce success after '+str(attempt)+' attempts')
-                print('password: '+guess)
-                print('encrypted titlekey: '+encrypted_keyguess)
-                print('decrypted titlekey: '+binascii.hexlify(unencrypted_keyguess).decode())
-                decoded_event.set()
-            time.sleep(0.2)
+            b = time.time()
+            guesses, attempt = data_queue.get(timeout=1) # Should be longer than the guess generator's sleep
+            c = time.time()
+            for guess in guesses:
+                unencrypted_keyguess, encrypted_keyguess = keygen.encrypt_guess(tid, guess, ckey)
+                result = wiiu_decrypt.decrypt(tid, encrypted_keyguess, ckey, contents, title_id, app_data)
+                d = time.time()
+                checking += b-a
+                waiting += c-b
+                decrypting += d-c
+                if (result == 1):
+                    print('bruteforce success after about '+str(attempt)+' attempts')
+                    print('password: '+guess)
+                    print('encrypted titlekey: '+encrypted_keyguess)
+                    print('decrypted titlekey: '+binascii.hexlify(unencrypted_keyguess).decode())
+                    decoded_event.set()
         except:
             if passes_done_event.is_set() and data_queue.empty():
                 print(f"[Worker {worker_id}] No more data and producer is done.")
@@ -142,6 +130,7 @@ def wiiu_process_guesses(worker_id, contents, title_id, app_data, tid, ckey):
             continue
 
 def main():
+    global data_queue, decoded_event, passes_done_event
     manager = multiprocessing.Manager()
     data_queue = manager.Queue(QUEUE_MAX_SIZE)
     decoded_event = manager.Event()
@@ -207,3 +196,6 @@ def main():
             bruteforce_dsi(tid, ckey)
         case _:
             print('system '+system+' is invalid or not yet implemented')
+
+if __name__ == "__main__":
+    main()
