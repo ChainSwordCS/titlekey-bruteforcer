@@ -124,7 +124,7 @@ def get_guesses(chars = string.printable.strip(), minsize = 1, maxsize = 5, offs
                         iter_done = True
                     if len(passes) > 0:
                         data_queue.put((passes, attempts), timeout=1)
-                        if i == QUEUE_MAX_SIZE - queue_size:
+                        if i == QUEUE_MAX_SIZE - queue_size - 1:
                             print(passes[-1])
                         attempts += len(passes)
                     if iter_done:
