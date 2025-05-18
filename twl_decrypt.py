@@ -7,7 +7,7 @@
 from hashlib import sha1
 import binascii
 import os
-import libTWLPy
+import libTWLPy # designed for libTWLPy v0.1.0
 
 
 
@@ -31,13 +31,18 @@ def get_data(tid):
     if ticketpath != '':
         title.load_ticket(open(ticketpath, 'rb').read())
         print('preexisting ticket found!')
+        print('reported common_key_index: '+str(title.ticket.common_key_index))
+        if title.ticket.common_key_index == 0:
+            # we have to manually override it with the correct value
+            # for libTWLPy's decryption-related methods to actually work. :P
+            # additional note: title.ticket.get_title_key() is one such method.
+            print('overriding...')
+            title.ticket.common_key_index = 1
+            print('common_key_index: '+str(title.ticket.common_key_index))
         enc_titlekey = binascii.hexlify(title.ticket.title_key_enc)
         dec_titlekey = binascii.hexlify(title.ticket.get_title_key())
         print('encrypted titlekey from ticket: '+enc_titlekey.decode())
         print('decrypted titlekey from ticket: '+dec_titlekey.decode())
-        print('common_key_index: '+title.ticket.get_common_key_type()+'('+str(title.ticket.common_key_index)+')')
-        
-    #title.load_ticket(tid+'/cetk', 'rb')
     
     contentstr = '{:08X}'.format(title.tmd.content_record.content_id)
     #contentstr = contentstr+'.app'
