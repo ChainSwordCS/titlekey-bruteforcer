@@ -161,8 +161,6 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
                 #print(' > TMD:    ' + c[4].hex().upper())
                 #print(' > Result: ' + content_hash.hexdigest().upper())
                 return 0
-            else:
-                return 1
 
             h0_hash_num = 0
             h1_hash_num = 0
@@ -246,8 +244,6 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
                 #print(' > TMD:    ' + c[4].hex().upper())
                 #print(' > Result: ' + content_hash.hexdigest().upper())
                 return 0
-            else:
-                return 1
             decrypted_parts.append(decrypted)
     
     finalize_dec(arg_tid, contents, decrypted_parts)
