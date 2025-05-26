@@ -219,11 +219,11 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
                         print('password: '+guess)
                         try: #not sure if this works
                             encrypted_keyguess = keygen.encrypt_title_key(tid, unencrypted_keyguess, ckey)
-                            print('encrypted titlekey: '+binascii.hexlify(encrypted_keyguess).decode())
+                            print('encrypted titlekey: '+encrypted_keyguess.decode())
                         except:
                             print(':(')
                             continue
-                        print('decrypted titlekey: '+binascii.hexlify(unencrypted_keyguess).decode())
+                        print('decrypted titlekey: '+unencrypted_keyguess.decode())
                         decoded_event.set()
                         
             except:
