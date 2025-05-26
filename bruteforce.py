@@ -49,7 +49,7 @@ def bruteforce_wiiu(tid, ckey):
         workers.append(p)
     
     try:
-        get_guesses(chars, 1, 5, 0, False)
+        get_guesses(chars, 1, 5, 0, True)
     except KeyboardInterrupt:
         decoded_event.set() # Not actually decoded but it shuts down all the stuff
     
@@ -74,7 +74,7 @@ def bruteforce_dsi(tid, ckey):
         workers.append(p)
     
     try:
-        get_guesses(chars, 1, 5, 0, False)
+        get_guesses(chars, 1, 5, 0, True)
     except KeyboardInterrupt:
         decoded_event.set() # Not actually decoded but it shuts down all the stuff
     
