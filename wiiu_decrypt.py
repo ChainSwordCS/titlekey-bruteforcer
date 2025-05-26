@@ -32,13 +32,22 @@ def show_chunk(num, count, cid):
     sys.stdout.flush()
 
 def get_contents(arg_tid):
-    if not os.path.isfile(arg_tid+'/title.tmd'):
+    tmdfilename = ''
+    
+    if os.path.isfile(arg_tid+'/title.tmd'):
+        tmdfilename = 'title.tmd'
+    elif os.path.isfile(arg_tid+'/tmd'):
+        tmdfilename = 'tmd'
+    elif os.path.isfile(arg_tid+'/tmd.0'):
+        tmdfilename = 'tmd.0'
+    else:
         sys.exit('No TMD (title.tmd) was found.')
+    print('found '+tmdfilename)
 
     # find title id and content id
     title_id = b''
     contents = []
-    with open(arg_tid+'/title.tmd', 'rb') as tmd:
+    with open(arg_tid+'/'+tmdfilename, 'rb') as tmd:
         tmd.seek(0x18C)
         title_id = tmd.read(8)
 

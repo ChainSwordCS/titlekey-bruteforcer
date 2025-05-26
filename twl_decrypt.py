@@ -15,7 +15,19 @@ import libTWLPy # designed for libTWLPy v0.1.0
 def get_data(tid):
     title = libTWLPy.Title()
     title_dir = tid
-    with open(tid+'/title.tmd', 'rb') as tmdfile:
+    
+    tmdfilename = ''
+    if os.path.isfile(tid+'/title.tmd'):
+        tmdfilename = 'title.tmd'
+    elif os.path.isfile(tid+'/tmd'):
+        tmdfilename = 'tmd'
+    elif os.path.isfile(tid+'/tmd.0'):
+        tmdfilename = 'tmd'
+    else:
+        sys.exit('No TMD (title.tmd) was found.')
+    print('found '+tmdfilename)
+    
+    with open(tid+'/'+tmdfilename, 'rb') as tmdfile:
         title.load_tmd(tmdfile.read())
     #title_version = title.tmd.title_version
     title.load_content_records()
