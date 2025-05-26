@@ -162,8 +162,6 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
                 #print(' > Result: ' + content_hash.hexdigest().upper())
                 return 0
             else:
-                decrypted_parts.append(decrypted)
-                finalize_dec(arg_tid, contents, decrypted_parts)
                 return 1
 
             h0_hash_num = 0
@@ -178,7 +176,7 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
                 #show_chunk(chunk_num, chunk_count, c[0])
                 # decrypt and verify hash tree
                 cipher_hash_tree = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(bytes(16)), backend=default_backend()).decryptor()
-                hash_tree = cipher_hash_tree.update(encrypted[0x1000*chunk_num:0x1000*chunk_num+0x400]) + cipher_hash_tree.finalize()
+                hash_tree = cipher_hash_tree.update(encrypted[0x10000*chunk_num:0x10000*chunk_num+0x400]) + cipher_hash_tree.finalize()
                 h0_hashes = hash_tree[0:0x140]
                 h1_hashes = hash_tree[0x140:0x280]
                 h2_hashes = hash_tree[0x280:0x3c0]
@@ -199,7 +197,7 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
 
                 iv = h0_hash[0:0x10]
                 cipher_content = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(iv), backend=default_backend()).decryptor()
-                decrypted_data = cipher_content.update(encrypted[0x1000*chunk_num:0x1000*chunk_num+0xFC00]) + cipher_content.finalize()
+                decrypted_data = cipher_content.update(encrypted[0x10000*chunk_num+0x400:0x10000*chunk_num+0xFC00+0x400]) + cipher_content.finalize()
                 if hashlib.sha1(decrypted_data).digest() != h0_hash:
                     #print('\rData block hash invalid in chunk {}'.format(chunk_num))
                     return 0
@@ -216,6 +214,7 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
                     h2_hash_num = 0
                     h3_hash_num += 1
             #print('')
+            decrypted_parts.append(decrypted)
         else:
             cipher_content = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(c[1] + bytes(14)), backend=default_backend()).decryptor()
             content_hash = hashlib.sha1()
@@ -248,8 +247,8 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
                 #print(' > Result: ' + content_hash.hexdigest().upper())
                 return 0
             else:
-                decrypted_parts.append(decrypted)
-                finalize_dec(arg_tid, contents, decrypted_parts)
                 return 1
-        
-        decrypted_parts.append(decrypted)
+            decrypted_parts.append(decrypted)
+    
+    finalize_dec(arg_tid, contents, decrypted_parts)
+    return 1
