@@ -5,6 +5,7 @@
 # License: MIT
 
 from hashlib import sha1
+from Crypto.Cipher import AES
 import binascii
 import os
 import libTWLPy # designed for libTWLPy v0.1.0
@@ -71,10 +72,25 @@ def get_data(tid):
     #decrypt_from_ticket(tid, metadata, content, title)
     return metadata, content, title
     
+# adapted (with modifications) from crypto.py from libTWLPy - https://github.com/NinjaCheetah/libTWLPy
+def crypto_decrypt_content(content_enc, title_key, content_length) -> bytes:
+    # TADs only have one content, so the IV is always all 0 bytes.
+    content_iv = b'\x00' * 16
+    # Align content to 16 bytes to ensure that it works with AES encryption.
+    if (len(content_enc) % 16) != 0:
+        content_enc = content_enc + (b'\x00' * (16 - (len(content_enc) % 16)))
+    # Create a new AES object with the values provided, with the content's unique ID as the IV.
+    aes = AES.new(title_key, AES.MODE_CBC, content_iv)
+    # Decrypt the content using the AES object.
+    content_dec = aes.decrypt(content_enc)
+    # Trim additional bytes that may have been added so the content is the correct size.
+    content_dec = content_dec[:content_length]
+    return content_dec
 
 def decrypt(tid, keyguess, ckey, metadata, content):
     # decrypt
-    content_dec = libTWLPy.crypto.decrypt_content(content, binascii.unhexlify(keyguess), metadata[3])
+    #content_dec = libTWLPy.crypto.decrypt_content(content, binascii.unhexlify(keyguess), metadata[3])
+    content_dec = crypto_decrypt_content(content, binascii.unhexlify(keyguess), metadata[3])
     
     # verify hash
     content_dec_hash = sha1(content_dec).hexdigest()
