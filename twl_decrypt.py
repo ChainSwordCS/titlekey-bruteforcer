@@ -82,6 +82,9 @@ def decrypt(tid, keyguess, ckey, metadata, content):
     if content_dec_hash != content_record_hash:
         return 0
     else:
+        srlpath = tid + '/' + '{:08X}'.format(metadata[0]) + '.srl'
+        with open(srlpath, 'wb') as out:
+            out.write(content_dec)
         return 1
 
 
@@ -98,7 +101,9 @@ def decrypt_from_ticket(tid, metadata, content, title):
     title.ticket.common_key_index = 1
     
     try:
-        title.get_content()
+        content_bytes = title.get_content()
+        with open(tid + '/' + '{:08X}'.format(title.tmd.content_record.content_id) + '.srl', 'wb') as out:
+            out.write(content_bytes)
         print(':)')
     except ValueError:
         print(':(')
