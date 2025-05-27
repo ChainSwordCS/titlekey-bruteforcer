@@ -18,7 +18,7 @@ import twl_decrypt
 
 # Argument parser setup
 parser = argparse.ArgumentParser()
-parser.add_argument('--system', help='valid options: \'wiiu\', \'dsi\'\n'+'not yet implemented: \'wii\', \'3ds\'')
+parser.add_argument('--system', help='valid options: \'wiiu\', \'dsi\'. '+'not yet implemented: \'wii\', \'3ds\'')
 parser.add_argument('--commonkey', help='choose a commonkey from ckey.json, in case the automatic choice is wrong. valid options: \'dsi_prod\', \'dsi_dev\', \'dsi_debugger\', \'wiiu_prod\', \'wiiu_dev\'')
 parser.add_argument('--commonkeyoverride', help='manually specify the commonkey')
 parser.add_argument('titleid')
