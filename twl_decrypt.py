@@ -87,7 +87,30 @@ def crypto_decrypt_content(content_enc, title_key, content_length) -> bytes:
     content_dec = content_dec[:content_length]
     return content_dec
 
+# https://dsibrew.org/wiki/DSi_cartridge_header
+def abridged_decrypt(tid, titlekey, ckey, metadata, content):
+    # trim and just decrypt that
+    content_enc = content[:1024]
+    
+    content_iv = b'\x00' * 16
+    aes = AES.new(binascii.unhexlify(titlekey), AES.MODE_CBC, content_iv)
+    content_dec = aes.decrypt(content_enc)
+    
+    # note: .decode('ascii') is substantially faster for some reason
+    game_id = (bytes.fromhex(tid))[4:].decode('ascii')
+    game_id2 = content_dec[0x00C:0x010].decode('ascii')
+    if game_id == game_id2:
+        #print(game_id+' == '+game_id2)
+        return 1
+    else:
+        return 0
+
 def decrypt(tid, keyguess, ckey, metadata, content):
+    
+    result = abridged_decrypt(tid, keyguess, ckey, metadata, content)
+    if result == 0:
+        return 0
+    
     # decrypt
     #content_dec = libTWLPy.crypto.decrypt_content(content, binascii.unhexlify(keyguess), metadata[3])
     content_dec = crypto_decrypt_content(content, binascii.unhexlify(keyguess), metadata[3])
