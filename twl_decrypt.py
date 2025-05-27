@@ -22,7 +22,7 @@ def get_data(tid):
     elif os.path.isfile(tid+'/tmd'):
         tmdfilename = 'tmd'
     elif os.path.isfile(tid+'/tmd.0'):
-        tmdfilename = 'tmd'
+        tmdfilename = 'tmd.0'
     else:
         sys.exit('No TMD (title.tmd) was found.')
     print('found '+tmdfilename)
