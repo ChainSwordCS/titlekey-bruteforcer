@@ -143,6 +143,11 @@ def wiiu_process_guesses(worker_id, data_queue, decoded_event, passes_done_event
                     print('encrypted titlekey: '+encrypted_keyguess)
                     print('decrypted titlekey: '+binascii.hexlify(unencrypted_keyguess).decode())
                     decoded_event.set()
+                    time.sleep(2) # wait 2 seconds for other threads to stop so the log is more coherent
+                    print('decrypting full title contents...')
+                    result = wiiu_decrypt.decrypt(tid, encrypted_keyguess, ckey, contents, title_id, app_data, True)
+                    if (result == 0):
+                        print('Warning: One or more decrypted contents failed hash verification. (Is the data corrupt?)')
         except:
             if passes_done_event.is_set() and data_queue.empty():
                 print(f"[Worker {worker_id}] No more data and producer is done.")

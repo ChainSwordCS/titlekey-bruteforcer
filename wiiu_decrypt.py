@@ -101,7 +101,19 @@ def finalize_dec(arg_tid, contents, decrypted_parts):
         with open(arg_tid + '/' + c[0] + '.app.dec', 'wb') as decrypted:
             decrypted.write(decrypted_parts[i])
             
-def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
+# if the argument decrypt_full_contents is False, this function returns early
+# after decrypting juuuust enough data to verify a hash.
+# this strategy is lightning-fast, but could possibly result in false-positives.
+# 
+# if decrypt_full_contents is True, this function doesn't return until decrypting
+# full/all contents of the title.
+# 
+# returns 1 on success; all content hashes match, titlekey is correct.
+# returns 0 on failure; either the titlekey is wrong (99% likely), or the content is corrupt.
+def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data, decrypt_full_contents = False):
+    # this var is only used if decrypt_full_contents == True
+    corruption_detected = False
+    
     #try:
     #    with open(os.path.expanduser('~/.wiiu/common-key'), 'r') as f:
     #        # to allow for spaces in the hex text
@@ -148,19 +160,37 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
 
     for i in range(len(contents)):
         c = contents[i]
-        #print('Decrypting {}...'.format(c[0]), end='')
         left = sizes[i]  # set to file size
         left_hash = c[3]  # set to tmd size (can differ to filesize)
+        
+        # logging
+        if decrypt_full_contents:
+            size_string = ''
+            if left < 1024:
+                size_string = str(left)+' bytes'
+            elif left < 1024 * 1024:
+                mysize = left * 1.0 / 1024
+                size_string = '{0:.1f}'.format(mysize)+' KiB'
+            elif left < 1024 * 1024 * 1024:
+                mysize = left * 1.0 / (1024*1024)
+                size_string = '{0:.1f}'.format(mysize)+' MiB'
+            else:
+                mysize = left * 1.0 / (1024*1024*1024)
+                size_string = '{0:.1f}'.format(mysize)+' GiB'
+            print('Decrypting {}'.format(c[0])+' ('+size_string+')...')
 
         if c[2] & 2:  # if has a hash tree
             chunk_count = left // 0x10000
             chunk_num = 0
             h3_hashes = h3_hasheses[i]
             if hashlib.sha1(h3_hashes).digest() != c[4]:
-                #print('H3 Hash mismatch!')
-                #print(' > TMD:    ' + c[4].hex().upper())
-                #print(' > Result: ' + content_hash.hexdigest().upper())
-                return 0
+                if decrypt_full_contents:
+                    corruption_detected = True
+                    print('H3 Hash mismatch!')
+                    print(' > TMD:    ' + c[4].hex().upper())
+                    print(' > Result: ' + content_hash.hexdigest().upper())
+                else:
+                    return 0
 
             h0_hash_num = 0
             h1_hash_num = 0
@@ -184,21 +214,33 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
                 h2_hash = h2_hashes[(h2_hash_num * 0x14):((h2_hash_num + 1) * 0x14)]
                 h3_hash = h3_hashes[(h3_hash_num * 0x14):((h3_hash_num + 1) * 0x14)]
                 if hashlib.sha1(h0_hashes).digest() != h1_hash:
-                    #print('\rH0 Hashes invalid in chunk {}'.format(chunk_num))
-                    return 0
+                    if decrypt_full_contents:
+                        corruption_detected = True
+                        print('\rH0 Hashes invalid in chunk {}'.format(chunk_num))
+                    else:
+                        return 0
                 if hashlib.sha1(h1_hashes).digest() != h2_hash:
-                    #print('\rH1 Hashes invalid in chunk {}'.format(chunk_num))
-                    return 0
+                    if decrypt_full_contents:
+                        corruption_detected = True
+                        print('\rH1 Hashes invalid in chunk {}'.format(chunk_num))
+                    else:
+                        return 0
                 if hashlib.sha1(h2_hashes).digest() != h3_hash:
-                    #print('\rH2 Hashes invalid in chunk {}'.format(chunk_num))
-                    return 0
+                    if decrypt_full_contents:
+                        corruption_detected = True
+                        print('\rH2 Hashes invalid in chunk {}'.format(chunk_num))
+                    else:
+                        return 0
 
                 iv = h0_hash[0:0x10]
                 cipher_content = Cipher(algorithms.AES(decrypted_titlekey), modes.CBC(iv), backend=default_backend()).decryptor()
                 decrypted_data = cipher_content.update(encrypted[0x10000*chunk_num+0x400:0x10000*chunk_num+0xFC00+0x400]) + cipher_content.finalize()
                 if hashlib.sha1(decrypted_data).digest() != h0_hash:
-                    #print('\rData block hash invalid in chunk {}'.format(chunk_num))
-                    return 0
+                    if decrypt_full_contents:
+                        corruption_detected = True
+                        print('\rData block hash invalid in chunk {}'.format(chunk_num))
+                    else:
+                        return 0
                 decrypted += hash_tree + decrypted_data
 
                 h0_hash_num += 1
@@ -240,11 +282,24 @@ def decrypt(arg_tid, arg_titlekey, arg_ckey, contents, title_id, app_data):
                     break
             cipher_content.finalize()
             if c[4] != content_hash.digest():
-                #print('Content Hash mismatch!')
-                #print(' > TMD:    ' + c[4].hex().upper())
-                #print(' > Result: ' + content_hash.hexdigest().upper())
-                return 0
+                if decrypt_full_contents:
+                    corruption_detected = True
+                    print('Content Hash mismatch!')
+                    print(' > TMD:    ' + c[4].hex().upper())
+                    print(' > Result: ' + content_hash.hexdigest().upper())
+                else:
+                    return 0
             decrypted_parts.append(decrypted)
+        # If the above hash checks pass, then this check is run.
+        # This check is only done once per content file,
+        # to be slightly less redundant and slightly
+        # more performant with decrypting .app/.h3 pairs
+        if not decrypt_full_contents:
+            return 1
     
+    # this code is only run if decrypt_full_contents == True
     finalize_dec(arg_tid, contents, decrypted_parts)
-    return 1
+    if corruption_detected:
+        return 0
+    else:
+        return 1
