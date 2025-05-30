@@ -16,14 +16,6 @@ import keygen
 import wiiu_decrypt
 import twl_decrypt
 
-# Argument parser setup
-parser = argparse.ArgumentParser()
-parser.add_argument('--system', help='valid options: \'wiiu\', \'dsi\'. '+'not yet implemented: \'wii\', \'3ds\'')
-parser.add_argument('--commonkey', help='choose a commonkey from ckey.json, in case the automatic choice is wrong. valid options: \'dsi_prod\', \'dsi_dev\', \'dsi_debugger\', \'wiiu_prod\', \'wiiu_dev\'')
-parser.add_argument('--commonkeyoverride', help='manually specify the commonkey')
-parser.add_argument('titleid')
-args = parser.parse_args()
-
 # Threading setup
 QUEUE_MAX_SIZE = 1000 # Strict
 QUEUE_MIN_SIZE = 500  # Target
@@ -248,22 +240,22 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
 
 
 
-def main():
+def main(arg_titleid, arg_system = None, arg_commonkey = None, arg_commonkeyoverride = None):
     global data_queue, decoded_event, passes_done_event
     manager = multiprocessing.Manager()
     data_queue = manager.Queue(QUEUE_MAX_SIZE)
     decoded_event = manager.Event()
     passes_done_event = manager.Event()
     
-    if args.titleid:
+    if arg_titleid:
         # TODO: sanity checking
-        tid = args.titleid
+        tid = arg_titleid
     else:
         sys.exit('Error: invalid titleid')
     
     system = ''
-    if args.system:
-        system = args.system
+    if arg_system:
+        system = arg_system
     else:
         sys.exit('Error: system autodetection based on titleid/content not yet implemented! please use the --system argument.')
     
@@ -280,15 +272,15 @@ def main():
             sys.exit('Error: invalid argument passed in --system')
     
     
-    if args.commonkeyoverride:
-        ckey = args.commonkeyoverride
+    if arg_commonkeyoverride:
+        ckey = arg_commonkeyoverride
     else:
-        if args.commonkey:
+        if arg_commonkey:
             with open('ckey.json', 'r') as f:
-                ckey = json.load(f)[args.commonkey+'_commonkey']
+                ckey = json.load(f)[arg_commonkey+'_commonkey']
             if ckey == '':
-                sys.exit('Error: failed to load '+args.commonkey+'_commonkey from ckey.json')
-            print('using '+args.commonkey+'_commonkey')
+                sys.exit('Error: failed to load '+arg_commonkey+'_commonkey from ckey.json')
+            print('using '+arg_commonkey+'_commonkey')
         else:
             keyselect = ''
             match system:
@@ -301,7 +293,7 @@ def main():
                 case 'wii':
                     keyselect = 'wii_dev_commonkey'
                 case _:
-                    sys.exit('Error: unable to autoselect commonkey for unknown system \"'+args.system+'\"')
+                    sys.exit('Error: unable to autoselect commonkey for unknown system \"'+arg_system+'\"')
             with open('ckey.json', 'r') as f:
                 ckey = json.load(f)[keyselect]
             if ckey == '':
@@ -315,6 +307,16 @@ def main():
             bruteforce_dsi(tid, ckey)
         case _:
             print('system '+system+' is invalid or not yet implemented')
+    
+    # return
 
 if __name__ == "__main__":
-    main()
+    # Argument parser setup
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--system', help='valid options: \'wiiu\', \'dsi\'. '+'not yet implemented: \'wii\', \'3ds\'')
+    parser.add_argument('--commonkey', help='choose a commonkey from ckey.json, in case the automatic choice is wrong. valid options: \'dsi_prod\', \'dsi_dev\', \'dsi_debugger\', \'wiiu_prod\', \'wiiu_dev\'')
+    parser.add_argument('--commonkeyoverride', help='manually specify the commonkey')
+    parser.add_argument('titleid')
+    args = parser.parse_args()
+    
+    main(args.titleid, args.system, args.commonkey, args.commonkeyoverride)
