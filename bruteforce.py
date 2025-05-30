@@ -122,9 +122,9 @@ def wiiu_process_guesses(worker_id, data_queue, decoded_event, passes_done_event
     while True:
         a = time.time()
         if decoded_event.is_set():
-            print(f"[Worker {worker_id}] Total checking time: {checking}")
-            print(f"[Worker {worker_id}] Total waiting time: {waiting}")
-            print(f"[Worker {worker_id}] Total decrypting time: {decrypting}")
+            print(f"[Worker {worker_id}] Total checking time: {checking}\n"+
+                  f"[Worker {worker_id}] Total waiting time: {waiting}\n"+
+                  f"[Worker {worker_id}] Total decrypting time: {decrypting}")
             break
         try:
             b = time.time()
@@ -150,7 +150,10 @@ def wiiu_process_guesses(worker_id, data_queue, decoded_event, passes_done_event
                         print('Warning: One or more decrypted contents failed hash verification. (Is the data corrupt?)')
         except:
             if passes_done_event.is_set() and data_queue.empty():
-                print(f"[Worker {worker_id}] No more data and producer is done.")
+                print(f"[Worker {worker_id}] No more data and producer is done.\n"+
+                      f"[Worker {worker_id}] Total checking time: {checking}\n"+
+                      f"[Worker {worker_id}] Total waiting time: {waiting}\n"+
+                      f"[Worker {worker_id}] Total decrypting time: {decrypting}")
                 break
             continue
 
@@ -165,9 +168,9 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
         while True:
             a = time.time()
             if decoded_event.is_set():
-                print(f"[Worker {worker_id}] Total checking time: {checking}")
-                print(f"[Worker {worker_id}] Total waiting time: {waiting}")
-                print(f"[Worker {worker_id}] Total decrypting time: {decrypting}")
+                print(f"[Worker {worker_id}] Total checking time: {checking}\n"+
+                      f"[Worker {worker_id}] Total waiting time: {waiting}\n"+
+                      f"[Worker {worker_id}] Total decrypting time: {decrypting}")
                 break
             try:
                 b = time.time()
@@ -195,7 +198,10 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
                         
             except:
                 if passes_done_event.is_set() and data_queue.empty():
-                    print(f"[Worker {worker_id}] No more data and producer is done.")
+                    print(f"[Worker {worker_id}] No more data and producer is done.\n"+
+                          f"[Worker {worker_id}] Total checking time: {checking}\n"+
+                          f"[Worker {worker_id}] Total waiting time: {waiting}\n"+
+                          f"[Worker {worker_id}] Total decrypting time: {decrypting}")
                     break
                 continue
     else:
@@ -203,9 +209,9 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
         while True:
             a = time.time()
             if decoded_event.is_set():
-                print(f"[Worker {worker_id}] Total checking time: {checking}")
-                print(f"[Worker {worker_id}] Total waiting time: {waiting}")
-                print(f"[Worker {worker_id}] Total decrypting time: {decrypting}")
+                print(f"[Worker {worker_id}] Total checking time: {checking}\n"+
+                      f"[Worker {worker_id}] Total waiting time: {waiting}\n"+
+                      f"[Worker {worker_id}] Total decrypting time: {decrypting}")
                 break
             try:
                 b = time.time()
@@ -233,7 +239,10 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
                         
             except:
                 if passes_done_event.is_set() and data_queue.empty():
-                    print(f"[Worker {worker_id}] No more data and producer is done.")
+                    print(f"[Worker {worker_id}] No more data and producer is done.\n"+
+                          f"[Worker {worker_id}] Total checking time: {checking}\n"+
+                          f"[Worker {worker_id}] Total waiting time: {waiting}\n"+
+                          f"[Worker {worker_id}] Total decrypting time: {decrypting}")
                     break
                 continue
 
