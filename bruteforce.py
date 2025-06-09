@@ -23,7 +23,7 @@ NUM_WORKERS = multiprocessing.cpu_count() // 2 # Probably about optimal?
 BATCH_SIZE = 500
 #NUM_WORKERS = 1
 
-COMMON_PASSES = ["mypass", "nintendo", "1234", "5678", "56789", "1234567890", "test", "redsst", "d4t4c3nt3r", "password", "", "0", "0000", "5037", "nintedno", "Lucy131211", "fbf10"]
+COMMON_PASSES = ["mypass", "nintendo", "1234", "5678", "56789", "1234567890", "test", "redsst", "d4t4c3nt3r", "datacenter", "password", "", "0", "0000", "5037", "nintedno", "Lucy131211", "fbf10"]
 
 
 def bruteforce_wiiu(tid, ckey):
