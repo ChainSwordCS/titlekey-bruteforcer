@@ -36,6 +36,13 @@ def generate_key(title_id, pwd):
     # return as hexstring
     return binascii.hexlify(non_encrypted_key)
 
+# known alternate algorithm called the "unsafe" algorithm. 
+# as of now, we don't know if it was ever actually used, but might as well check.
+def generate_key_algo2(title_id):
+    # TODO: add leading zeroes; pad left to 16 characters
+    title_id = title_id + "T01"
+	# UTF-8 is supposedly correct.
+    return md5(title_id.encode('utf-8')).digest()
 
 def encrypt_title_key(title_id, title_key, ckey):
     # pad title id with trailing zeroes

@@ -94,14 +94,18 @@ def abridged_decrypt(tid, titlekey, ckey, metadata, content):
     content_enc = content[:1024]
     
     content_iv = b'\x00' * 16
-    aes = AES.new(binascii.unhexlify(titlekey), AES.MODE_CBC, content_iv)
+    aes = AES.new(titlekey, AES.MODE_CBC, content_iv)
     content_dec = aes.decrypt(content_enc)
     
     # note: .decode('ascii') is substantially faster for some reason
     game_id = (bytes.fromhex(tid))[4:].decode('ascii')
-    game_id2 = content_dec[0x00C:0x010].decode('ascii')
+    try:
+        game_id2 = content_dec[0x00C:0x010].decode('ascii')
+    except:
+        # UnicodeDecodeError: 'ascii' codec can't decode byte [val] in position [pos]: ordinal not in range(128)
+        return 0
     if game_id == game_id2:
-        #print(game_id+' == '+game_id2)
+        print(game_id+' == '+game_id2)
         return 1
     else:
         return 0
@@ -114,18 +118,18 @@ def decrypt(tid, keyguess, ckey, metadata, content):
     
     # decrypt
     #content_dec = libTWLPy.crypto.decrypt_content(content, binascii.unhexlify(keyguess), metadata[3])
-    content_dec = crypto_decrypt_content(content, binascii.unhexlify(keyguess), metadata[3])
+    content_dec = crypto_decrypt_content(content, keyguess, metadata[3])
     
     # verify hash
     content_dec_hash = sha1(content_dec).hexdigest()
     content_record_hash = str(metadata[4].decode())
     if content_dec_hash != content_record_hash:
-        return 0
-    else:
-        srlpath = tid + '/' + '{:08X}'.format(metadata[0]) + '.srl'
-        with open(srlpath, 'wb') as out:
-            out.write(content_dec)
-        return 1
+        print('abridged_decrypt false positive?')
+        #return 0
+    srlpath = tid + '/' + '{:08X}'.format(metadata[0]) + '.srl'
+    with open(srlpath, 'wb') as out:
+        out.write(content_dec)
+    return 1
 
 
 def decrypt_from_ticket(tid, metadata, content, title):

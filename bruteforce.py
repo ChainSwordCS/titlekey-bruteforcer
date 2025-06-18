@@ -198,6 +198,17 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
                 continue
     else:
         # decrypt content and verify hash, business as usual
+        
+        # first do this oneshot
+        unencrypted_keyguess = keygen.generate_key_algo2(tid)
+        result = twl_decrypt.decrypt(tid, unencrypted_keyguess, ckey, metadata, content)
+        if (result == 1):
+            print('bruteforce success after about 1 attempts')
+            encrypted_keyguess = keygen.encrypt_title_key(tid, unencrypted_keyguess, ckey)
+            print('encrypted titlekey: '+encrypted_keyguess.decode())
+            print('decrypted titlekey: '+unencrypted_keyguess.decode())
+            decoded_event.set()
+        
         while True:
             a = time.time()
             if decoded_event.is_set():
@@ -212,7 +223,7 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
                 for guess in guesses:
                     encrypted_keyguess = ''
                     unencrypted_keyguess = keygen.generate_key(tid, guess)
-                    result = twl_decrypt.decrypt(tid, unencrypted_keyguess, ckey, metadata, content)
+                    result = twl_decrypt.decrypt(tid, binascii.unhexlify(unencrypted_keyguess), ckey, metadata, content)
                     d = time.time()
                     checking += b-a
                     waiting += c-b
