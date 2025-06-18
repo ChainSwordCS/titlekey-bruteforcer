@@ -81,8 +81,8 @@ def get_guesses(chars = string.printable.strip(), minsize = 1, maxsize = 5, offs
     global data_queue, decoded_event, passes_done_event
     attempts = 0
     if use_common:
+        attempts += len(COMMON_PASSES)
         data_queue.put((COMMON_PASSES, attempts), timeout=1)
-        attempts += 1
     for length in range(minsize, maxsize+1):
         pass_iter = itertools.product(chars, repeat=length)
         iter_done = False
@@ -220,12 +220,8 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
                     if (result == 1):
                         print('bruteforce success after about '+str(attempt)+' attempts')
                         print('password: '+guess)
-                        try: #not sure if this works
-                            encrypted_keyguess = keygen.encrypt_title_key(tid, unencrypted_keyguess, ckey)
-                            print('encrypted titlekey: '+encrypted_keyguess.decode())
-                        except:
-                            print(':(')
-                            continue
+                        encrypted_keyguess = keygen.encrypt_title_key(tid, unencrypted_keyguess, ckey)
+                        print('encrypted titlekey: '+encrypted_keyguess.decode())
                         print('decrypted titlekey: '+unencrypted_keyguess.decode())
                         decoded_event.set()
                         
