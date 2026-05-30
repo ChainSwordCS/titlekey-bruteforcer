@@ -26,11 +26,15 @@ BATCH_SIZE = 500
 
 COMMON_PASSES = ["mypass", "nintendo", "1234", "5678", "56789", "1234567890", "test", "redsst", "d4t4c3nt3r", "datacenter", "password", "", "0", "0000", "5037", "nintedno", "Lucy131211", "fbf10"]
 
+# pool of available text characters for bruteforcing
+DEFAULT_CHARS = string.digits + string.ascii_lowercase # Usually the only characters in use
+#DEFAULT_CHARS = string.digits + string.ascii_lowercase + string.ascii_uppercase + string.punctuation + " "
+#DEFAULT_CHARS = string.printable.strip()
+DEFAULT_MINLENGTH = 1
+DEFAULT_MAXLENGTH = 8
 
-def bruteforce_wiiu(tid, ckey):
+def bruteforce_wiiu(tid, ckey, chars, minlength, maxlength):
     global data_queue, decoded_event
-    #chars = "0123456789"
-    chars = string.digits + string.ascii_lowercase # Only observed characters so far
     contents, title_id = wiiu_decrypt.get_contents(tid)
     app_data = wiiu_decrypt.get_app_data(tid, contents)
     
@@ -42,7 +46,7 @@ def bruteforce_wiiu(tid, ckey):
         workers.append(p)
     
     try:
-        get_guesses(chars, 1, 5, 0, True)
+        get_guesses(chars, minlength, maxlength, 0, True)
     except KeyboardInterrupt:
         decoded_event.set() # Not actually decoded but it shuts down all the stuff
     
@@ -53,10 +57,8 @@ def bruteforce_wiiu(tid, ckey):
         print('bruteforce failed...')
     return
 
-def bruteforce_dsi(tid, ckey):
+def bruteforce_dsi(tid, ckey, chars, minlength, maxlength):
     global data_queue, decoded_event
-    #chars = "mypas"
-    chars = string.digits + string.ascii_lowercase # Only observed characters so far
     metadata, content, title = twl_decrypt.get_data(tid)
     
     # Start worker processes
@@ -67,7 +69,7 @@ def bruteforce_dsi(tid, ckey):
         workers.append(p)
     
     try:
-        get_guesses(chars, 1, 5, 0, True)
+        get_guesses(chars, minlength, maxlength, 0, True)
     except KeyboardInterrupt:
         decoded_event.set() # Not actually decoded but it shuts down all the stuff
     
@@ -78,9 +80,10 @@ def bruteforce_dsi(tid, ckey):
         print('bruteforce failed...')
     return
 
-def get_guesses(chars = string.printable.strip(), minsize = 1, maxsize = 5, offset = 0, use_common = True):
+def get_guesses(chars, minsize, maxsize, offset = 0, use_common = True):
     global data_queue, decoded_event, passes_done_event
     attempts = 0
+    # use common passwords
     if use_common:
         attempts += len(COMMON_PASSES)
         data_queue.put((COMMON_PASSES, attempts), timeout=1)
@@ -248,12 +251,19 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
 
 
 
-def main(arg_titleid, arg_system = None, arg_commonkey = None, arg_commonkeyoverride = None):
+def main(arg_titleid, arg_system = None, arg_commonkey = None, arg_commonkeyoverride = None, arg_chars = None, arg_minlength = None, arg_maxlength = None):
     global data_queue, decoded_event, passes_done_event
     manager = multiprocessing.Manager()
     data_queue = manager.Queue(QUEUE_MAX_SIZE)
     decoded_event = manager.Event()
     passes_done_event = manager.Event()
+    
+    if not arg_chars:
+        arg_chars = DEFAULT_CHARS
+    if not arg_minlength:
+        arg_minlength = DEFAULT_MINLENGTH
+    if not arg_maxlength:
+        arg_maxlength = DEFAULT_MAXLENGTH
     
     if arg_titleid:
         # TODO: sanity checking
@@ -310,9 +320,9 @@ def main(arg_titleid, arg_system = None, arg_commonkey = None, arg_commonkeyover
     
     match system:
         case 'wiiu':
-            bruteforce_wiiu(tid, ckey)
+            bruteforce_wiiu(tid, ckey, arg_chars, arg_minlength, arg_maxlength)
         case 'dsi':
-            bruteforce_dsi(tid, ckey)
+            bruteforce_dsi(tid, ckey, arg_chars, arg_minlength, arg_maxlength)
         case _:
             print('system '+system+' is invalid or not yet implemented')
     
@@ -324,8 +334,11 @@ if __name__ == "__main__":
     parser.add_argument('--system', help='valid options: \'wiiu\', \'dsi\'. '+'not yet implemented: \'wii\', \'3ds\'')
     parser.add_argument('--commonkey', help='choose a commonkey from ckey.json, in case the automatic choice is wrong. valid options: \'dsi_prod\', \'dsi_dev\', \'dsi_debugger\', \'wiiu_prod\', \'wiiu_dev\'')
     parser.add_argument('--commonkeyoverride', help='manually specify the commonkey')
+    parser.add_argument('--chars', help='available text characters for password bruteforcing (default=0123456789abcdefghijklmnopqrstuvwxyz)')
+    parser.add_argument('--minlength', help='minimum password length to try. (default=1)')
+    parser.add_argument('--maxlength', help='maximum password length to try. (default=8)')
     #parser.add_argument('--extract', help='extract game files after successful decryption', action='store_true')
     parser.add_argument('titleid')
     args = parser.parse_args()
     
-    main(args.titleid, args.system, args.commonkey, args.commonkeyoverride)
+    main(args.titleid, args.system, args.commonkey, args.commonkeyoverride, args.chars, args.minlength, args.maxlength)
