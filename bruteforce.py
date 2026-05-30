@@ -239,7 +239,15 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
                         print('encrypted titlekey: '+encrypted_keyguess.decode())
                         print('decrypted titlekey: '+unencrypted_keyguess.decode())
                         decoded_event.set()
-                        
+                    elif (result == 2):
+                        print('false positive(?) at about '+str(attempt)+' attempts')
+                        print('password: '+guess)
+                        encrypted_keyguess = keygen.encrypt_title_key(tid, unencrypted_keyguess, ckey)
+                        print('encrypted titlekey: '+encrypted_keyguess.decode())
+                        print('decrypted titlekey: '+unencrypted_keyguess.decode())
+                        # keep going
+                    #elif (result == 0):
+                        # do nothing; keep going
             except:
                 if passes_done_event.is_set() and data_queue.empty():
                     print(f"[Worker {worker_id}] No more data and producer is done.\n"+

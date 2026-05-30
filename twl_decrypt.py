@@ -130,7 +130,15 @@ def decrypt(tid, keyguess, ckey, metadata, content):
     content_record_hash = str(metadata[4].decode())
     if content_dec_hash != content_record_hash:
         print('abridged_decrypt false positive?')
-        #return 0
+        # write the decoded srl to file, for the user to manually double-check if desired
+        try:
+            srlpath = tid + '/' + '{:08X}'.format(metadata[0]) + '[false_positive][' + binascii.hexlify(keyguess).decode() + '].srl'
+            with open(srlpath, 'wb') as out:
+                out.write(content_dec)
+        except:
+            print('srl out.write error')
+        return 2
+    #else:
     srlpath = tid + '/' + '{:08X}'.format(metadata[0]) + '.srl'
     with open(srlpath, 'wb') as out:
         out.write(content_dec)
