@@ -82,6 +82,7 @@ def get_app_data(arg_tid, contents):
     sizes = []
     apps = []
     for c in contents:
+        #sizes.append(os.path.getsize(arg_tid + '/' + c[0] + ''))
         sizes.append(os.path.getsize(arg_tid + '/' + c[0] + '.app'))
 
         if c[2] & 2:  # if has a hash tree
@@ -90,6 +91,7 @@ def get_app_data(arg_tid, contents):
         else:
             h3_hasheses.append(0)
         
+        #with open(arg_tid + '/' + c[0] + '', 'rb') as encrypted:
         with open(arg_tid + '/' + c[0] + '.app', 'rb') as encrypted:
             apps.append(encrypted.read())
     

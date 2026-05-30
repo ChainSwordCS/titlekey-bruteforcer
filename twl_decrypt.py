@@ -111,6 +111,11 @@ def abridged_decrypt(tid, titlekey, ckey, metadata, content):
         return 0
 
 def decrypt(tid, keyguess, ckey, metadata, content):
+    #print(''+keyguess.decode())
+    #keyguess = binascii.unhexlify(keyguess)
+    #a = keyguess
+    #keyguess = {a[3],a[2],a[1],a[0],a[7],a[6],a[5],a[4],a[11],a[10],a[9],a[8],a[15],a[14],a[13],a[12]}
+    #print(binascii.hexlify(keyguess).decode())
     
     result = abridged_decrypt(tid, keyguess, ckey, metadata, content)
     if result == 0:

@@ -19,7 +19,8 @@ import twl_decrypt
 # Threading setup
 QUEUE_MAX_SIZE = 1000 # Strict
 QUEUE_MIN_SIZE = 500  # Target
-NUM_WORKERS = multiprocessing.cpu_count() // 2 # Probably about optimal?
+#NUM_WORKERS = multiprocessing.cpu_count() // 2 # Probably about optimal?
+NUM_WORKERS = multiprocessing.cpu_count() - 1 # Probably about optimal?
 BATCH_SIZE = 500
 #NUM_WORKERS = 1
 
@@ -323,6 +324,7 @@ if __name__ == "__main__":
     parser.add_argument('--system', help='valid options: \'wiiu\', \'dsi\'. '+'not yet implemented: \'wii\', \'3ds\'')
     parser.add_argument('--commonkey', help='choose a commonkey from ckey.json, in case the automatic choice is wrong. valid options: \'dsi_prod\', \'dsi_dev\', \'dsi_debugger\', \'wiiu_prod\', \'wiiu_dev\'')
     parser.add_argument('--commonkeyoverride', help='manually specify the commonkey')
+    #parser.add_argument('--extract', help='extract game files after successful decryption', action='store_true')
     parser.add_argument('titleid')
     args = parser.parse_args()
     
