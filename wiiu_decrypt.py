@@ -82,8 +82,11 @@ def get_app_data(arg_tid, contents):
     sizes = []
     apps = []
     for c in contents:
-        #sizes.append(os.path.getsize(arg_tid + '/' + c[0] + ''))
-        sizes.append(os.path.getsize(arg_tid + '/' + c[0] + '.app'))
+        try: # this is the lazy way, but it works.
+            sizes.append(os.path.getsize(arg_tid + '/' + c[0] + ''))
+        except:
+            # this will throw a new exception if the file doesn't exist, that's what we want.
+            sizes.append(os.path.getsize(arg_tid + '/' + c[0] + '.app'))
 
         if c[2] & 2:  # if has a hash tree
             with open(arg_tid + '/' + c[0] + '.h3', 'rb') as h3:
@@ -91,9 +94,13 @@ def get_app_data(arg_tid, contents):
         else:
             h3_hasheses.append(0)
         
-        #with open(arg_tid + '/' + c[0] + '', 'rb') as encrypted:
-        with open(arg_tid + '/' + c[0] + '.app', 'rb') as encrypted:
-            apps.append(encrypted.read())
+        try:
+            with open(arg_tid + '/' + c[0] + '', 'rb') as encrypted:
+                apps.append(encrypted.read())
+        except:
+            # see above.
+            with open(arg_tid + '/' + c[0] + '.app', 'rb') as encrypted:
+                apps.append(encrypted.read())
     
     return (h3_hasheses, sizes, apps)
 
