@@ -33,7 +33,7 @@ DEFAULT_CHARS = string.digits + string.ascii_lowercase # Usually the only charac
 DEFAULT_MINLENGTH = 1
 DEFAULT_MAXLENGTH = 8
 
-def bruteforce_wiiu(tid, ckey, chars, minlength, maxlength):
+def bruteforce_wiiu(tid, ckey, chars, minlength, maxlength, resumeat):
     global data_queue, decoded_event
     contents, title_id = wiiu_decrypt.get_contents(tid)
     app_data = wiiu_decrypt.get_app_data(tid, contents)
@@ -46,7 +46,7 @@ def bruteforce_wiiu(tid, ckey, chars, minlength, maxlength):
         workers.append(p)
     
     try:
-        get_guesses(chars, minlength, maxlength, 0, True)
+        get_guesses(chars, minlength, maxlength, resumeat, True)
     except KeyboardInterrupt:
         decoded_event.set() # Not actually decoded but it shuts down all the stuff
     
@@ -57,7 +57,7 @@ def bruteforce_wiiu(tid, ckey, chars, minlength, maxlength):
         print('bruteforce failed...')
     return
 
-def bruteforce_dsi(tid, ckey, chars, minlength, maxlength):
+def bruteforce_dsi(tid, ckey, chars, minlength, maxlength, resumeat):
     global data_queue, decoded_event
     metadata, content, title = twl_decrypt.get_data(tid)
     
@@ -69,7 +69,7 @@ def bruteforce_dsi(tid, ckey, chars, minlength, maxlength):
         workers.append(p)
     
     try:
-        get_guesses(chars, minlength, maxlength, 0, True)
+        get_guesses(chars, minlength, maxlength, resumeat, True)
     except KeyboardInterrupt:
         decoded_event.set() # Not actually decoded but it shuts down all the stuff
     
@@ -80,13 +80,71 @@ def bruteforce_dsi(tid, ckey, chars, minlength, maxlength):
         print('bruteforce failed...')
     return
 
-def get_guesses(chars, minsize, maxsize, offset = 0, use_common = True):
+def get_guesses(chars, minsize, maxsize, resumeat = '', use_common = True):
     global data_queue, decoded_event, passes_done_event
     attempts = 0
     # use common passwords
     if use_common:
         attempts += len(COMMON_PASSES)
         data_queue.put((COMMON_PASSES, attempts), timeout=1)
+    
+    if resumeat != '':
+        print('starting at "' + resumeat + '"...')
+        length = len(resumeat)
+        # to simplify the looping code a little, go back one index first
+        #a = chars.find(resumeat[length-1:length])
+        #if a == 0:
+        #    a = 1 # whatever, screw it.
+        #resumeat = resumeat[:length-1] + chars[a-1:a]
+        
+        pass_iter = itertools.product(chars, repeat=length)
+        # itertools.product() doesn't have the args / API stuff needed for this,
+        # so we have to do stuff manually...
+        
+        offset = 0
+        i = 0
+        while (i < length):
+            b = chars.find(resumeat[length-1-i:length-i])
+            offset = offset + (b * (len(chars) ** (i)))
+            #print('offset+='+str(b)+' * ('+str(len(chars))+' ** '+str(i+1)+')')
+            i = i + 1
+        offset = offset - 1
+        print('offset='+str(offset)+' (offset into list of permutations of length '+str(length)+')')
+        
+        # TODO: this is stupid.
+        # it works well enough when offset is like, a few million...
+        # but when offset is like two billion, this is excessively slow,
+        # and then it takes a few mins to spin up.
+        # idk if there's realistically a better way of doing this within the confines of itertools. -C
+        j = 0
+        while (j < offset):
+            next(pass_iter)
+            j = j + 1
+        print('starting!')
+        
+        # 1:1 duplicate code starts here
+        iter_done = False
+        while not iter_done and not decoded_event.is_set() and not passes_done_event.is_set():
+            queue_size = data_queue.qsize()
+            if queue_size < QUEUE_MIN_SIZE:
+                for i in range((QUEUE_MAX_SIZE - queue_size)):
+                    passes = []
+                    try:
+                        for _ in range(BATCH_SIZE):
+                            passes.append(''.join(next(pass_iter)))
+                    except StopIteration:
+                        iter_done = True
+                    if len(passes) > 0:
+                        data_queue.put((passes, attempts), timeout=1)
+                        if i == QUEUE_MAX_SIZE - queue_size - 1:
+                            print(passes[-1])
+                        attempts += len(passes)
+                    if iter_done:
+                        break
+            time.sleep(.1)
+        # end of 1:1 duplicate code
+        minsize = length + 1
+        
     for length in range(minsize, maxsize+1):
         pass_iter = itertools.product(chars, repeat=length)
         iter_done = False
@@ -259,7 +317,7 @@ def dsi_process_guesses(worker_id, data_queue, decoded_event, passes_done_event,
 
 
 
-def main(arg_titleid, arg_system = None, arg_commonkey = None, arg_commonkeyoverride = None, arg_chars = None, arg_minlength = None, arg_maxlength = None):
+def main(arg_titleid, arg_system = None, arg_commonkey = None, arg_commonkeyoverride = None, arg_chars = None, arg_minlength = None, arg_maxlength = None, arg_resumeat = None):
     global data_queue, decoded_event, passes_done_event
     manager = multiprocessing.Manager()
     data_queue = manager.Queue(QUEUE_MAX_SIZE)
@@ -272,6 +330,8 @@ def main(arg_titleid, arg_system = None, arg_commonkey = None, arg_commonkeyover
         arg_minlength = DEFAULT_MINLENGTH
     if not arg_maxlength:
         arg_maxlength = DEFAULT_MAXLENGTH
+    if not arg_resumeat:
+        arg_resumeat = ''
     
     if arg_titleid:
         # TODO: sanity checking
@@ -328,9 +388,9 @@ def main(arg_titleid, arg_system = None, arg_commonkey = None, arg_commonkeyover
     
     match system:
         case 'wiiu':
-            bruteforce_wiiu(tid, ckey, arg_chars, arg_minlength, arg_maxlength)
+            bruteforce_wiiu(tid, ckey, arg_chars, arg_minlength, arg_maxlength, arg_resumeat)
         case 'dsi':
-            bruteforce_dsi(tid, ckey, arg_chars, arg_minlength, arg_maxlength)
+            bruteforce_dsi(tid, ckey, arg_chars, arg_minlength, arg_maxlength, arg_resumeat)
         case _:
             print('system '+system+' is invalid or not yet implemented')
     
@@ -345,8 +405,9 @@ if __name__ == "__main__":
     parser.add_argument('--chars', help='available text characters for password bruteforcing (default=0123456789abcdefghijklmnopqrstuvwxyz)')
     parser.add_argument('--minlength', help='minimum password length to try. (default=1)')
     parser.add_argument('--maxlength', help='maximum password length to try. (default=8)')
+    parser.add_argument('--resumeat', help='password to resume / (re-)start bruteforcing at.')
     #parser.add_argument('--extract', help='extract game files after successful decryption', action='store_true')
     parser.add_argument('titleid')
     args = parser.parse_args()
     
-    main(args.titleid, args.system, args.commonkey, args.commonkeyoverride, args.chars, args.minlength, args.maxlength)
+    main(args.titleid, args.system, args.commonkey, args.commonkeyoverride, args.chars, args.minlength, args.maxlength, args.resumeat)
